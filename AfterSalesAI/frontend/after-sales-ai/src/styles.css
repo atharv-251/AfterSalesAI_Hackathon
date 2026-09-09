@@ -1,0 +1,98 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #163238;
+  background: #eef5f3;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, textarea { font: inherit; }
+
+.shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+}
+
+.panel {
+  width: min(980px, 100%);
+  background: white;
+  border: 1px solid #d6e2df;
+  border-radius: 20px;
+  box-shadow: 0 18px 60px rgba(15, 48, 52, .12);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 28px 32px;
+  border-bottom: 1px solid #e4ecea;
+}
+
+.eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .12em; }
+h1 { margin: 4px 0; font-size: 28px; }
+.header p { margin: 0; color: #607478; }
+.status {
+  align-self: start;
+  border: 1px solid #c3d9d4;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.conversation { min-height: 420px; padding: 32px; }
+.welcome { max-width: 720px; }
+.welcome h2 { margin-top: 0; }
+.welcome p { color: #607478; line-height: 1.6; }
+
+.response-card {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid #d7e4e0;
+  border-radius: 14px;
+  background: #f7fbfa;
+}
+.response-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 750;
+}
+.response-card p { line-height: 1.6; }
+
+.composer {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e4ecea;
+  background: #f7faf9;
+}
+textarea {
+  flex: 1;
+  resize: vertical;
+  border: 1px solid #cbdad7;
+  border-radius: 12px;
+  padding: 12px 14px;
+  outline: none;
+}
+textarea:focus { border-color: #6d9890; }
+button {
+  align-self: end;
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-weight: 800;
+  cursor: pointer;
+}
+button:disabled { cursor: wait; opacity: .6; }
+
+@media (max-width: 720px) {
+  .shell { padding: 12px; }
+  .composer { flex-direction: column; }
+  button { align-self: stretch; }
+}

@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: aftersales-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: aftersalesai
+      POSTGRES_USER: aftersales
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in a local .env file}
+    ports:
+      - "5432:5432"
+    volumes:
+      - aftersales_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  aftersales_postgres_data:
