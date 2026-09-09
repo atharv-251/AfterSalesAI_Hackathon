@@ -10,6 +10,7 @@ public sealed class InMemoryToolRegistry : IToolRegistry
         new ToolDefinition
         {
             Id = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+            TenantId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
             ApplicationId = Guid.Parse("20000000-0000-0000-0000-000000000001"),
             IntegrationSourceId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
             Name = "get_order_status",
@@ -19,6 +20,7 @@ public sealed class InMemoryToolRegistry : IToolRegistry
         new ToolDefinition
         {
             Id = Guid.Parse("10000000-0000-0000-0000-000000000002"),
+            TenantId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
             ApplicationId = Guid.Parse("20000000-0000-0000-0000-000000000001"),
             IntegrationSourceId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
             Name = "get_delivery_status",
@@ -28,6 +30,7 @@ public sealed class InMemoryToolRegistry : IToolRegistry
         new ToolDefinition
         {
             Id = Guid.Parse("10000000-0000-0000-0000-000000000003"),
+            TenantId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
             ApplicationId = Guid.Parse("20000000-0000-0000-0000-000000000001"),
             IntegrationSourceId = Guid.Parse("30000000-0000-0000-0000-000000000002"),
             Name = "search_sop",
