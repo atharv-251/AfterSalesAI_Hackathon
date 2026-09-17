@@ -42,22 +42,25 @@ Health check:
 http://localhost:5000/api/health
 ```
 
-### PostgreSQL + pgvector
+### SQL Server
 
-From repository root:
+The local platform database is `AfterSalesAI_Demo` on SQL Server LocalDB or SQL Server 2025 Express. SSMS is optional for administration and verification.
 
-```cmd
-copy .env.example .env
-docker compose up -d postgres
-```
+The platform stores tenant, application, integration-source, tool, knowledge-document, and knowledge-chunk records. External APIs and external application databases remain controlled integration boundaries and are not directly exposed to the LLM.
 
-Set a non-production `POSTGRES_PASSWORD` in the local `.env` file. Before running the API with the PostgreSQL registry, set its connection string in the current PowerShell session:
+See the repository [README](../README.md) for migration, document ingestion, React startup, and VW Group LLMaaS configuration instructions.
+
+### Knowledge and SOP sources
+
+Knowledge ingestion and the UI library use the business PDFs in `API_Documents/Project Documents`, not the API structure Markdown in `Project api-docs`. The Knowledge & SOP page reads the active SQL index through `/api/knowledge/documents`; it does not bundle repository documents into the frontend.
+
+After migrations, run the following from `AfterSalesAI/` to ingest without starting either server:
 
 ```powershell
-$env:ConnectionStrings__AfterSalesAI = "Host=localhost;Port=5432;Database=aftersalesai;Username=aftersales;Password=$env:POSTGRES_PASSWORD"
+dotnet run --project src/AfterSalesAI.Api -- --ingest-knowledge=true --tenant-id=00000000-0000-0000-0000-000000000001 --application-id=20000000-0000-0000-0000-000000000001
 ```
 
-The API applies the checked-in initial registry migration at startup. When no connection string is configured, it remains runnable and uses the original in-memory tool registry.
+Extraction is local and requires text-based PDFs. Failed extraction leaves the existing index untouched. Successful ingestion deactivates obsolete API-reference knowledge records in the selected scope while preserving operational data and original files.
 
 ### Frontend
 

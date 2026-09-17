@@ -75,6 +75,9 @@ public sealed class KnowledgeDocument
     public string Name { get; set; } = string.Empty;
     public string DocumentType { get; set; } = string.Empty;
     public string Version { get; set; } = string.Empty;
+    public string SourcePath { get; set; } = string.Empty;
+    public DateTimeOffset CreatedUtc { get; set; }
+    public DateTimeOffset UpdatedUtc { get; set; }
     public bool IsActive { get; set; } = true;
 
     public Tenant Tenant { get; set; } = null!;
@@ -90,6 +93,8 @@ public sealed class KnowledgeChunk
     public Guid DocumentId { get; set; }
     public string Content { get; set; } = string.Empty;
     public string MetadataJson { get; set; } = "{}";
+    public int ChunkIndex { get; set; }
+    public DateTimeOffset CreatedUtc { get; set; }
 
     public Tenant Tenant { get; set; } = null!;
     public Application Application { get; set; } = null!;

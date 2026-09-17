@@ -107,8 +107,8 @@ internal sealed class ToolDefinitionConfiguration : IEntityTypeConfiguration<Too
         builder.HasKey(tool => tool.Id);
         builder.Property(tool => tool.Name).HasMaxLength(200).IsRequired();
         builder.Property(tool => tool.Description).HasMaxLength(2_000).IsRequired();
-        builder.Property(tool => tool.InputSchemaJson).HasColumnType("jsonb").IsRequired();
-        builder.Property(tool => tool.OutputSchemaJson).HasColumnType("jsonb").IsRequired();
+        builder.Property(tool => tool.InputSchemaJson).HasColumnType("nvarchar(max)").IsRequired();
+        builder.Property(tool => tool.OutputSchemaJson).HasColumnType("nvarchar(max)").IsRequired();
         builder.HasIndex(tool => new { tool.TenantId, tool.ApplicationId, tool.Name }).IsUnique();
         builder.HasIndex(tool => new { tool.TenantId, tool.ApplicationId, tool.IsActive });
         builder.HasOne(tool => tool.Tenant)
@@ -140,7 +140,8 @@ internal sealed class KnowledgeDocumentConfiguration : IEntityTypeConfiguration<
         builder.Property(document => document.Name).HasMaxLength(500).IsRequired();
         builder.Property(document => document.DocumentType).HasMaxLength(100).IsRequired();
         builder.Property(document => document.Version).HasMaxLength(100).IsRequired();
-        builder.HasIndex(document => new { document.TenantId, document.ApplicationId, document.Name, document.Version }).IsUnique();
+        builder.Property(document => document.SourcePath).HasMaxLength(1_000).IsRequired();
+        builder.HasIndex(document => new { document.TenantId, document.ApplicationId, document.SourcePath }).IsUnique();
         builder.HasOne(document => document.Tenant)
             .WithMany(tenant => tenant.KnowledgeDocuments)
             .HasForeignKey(document => document.TenantId)
@@ -159,7 +160,8 @@ internal sealed class KnowledgeChunkConfiguration : IEntityTypeConfiguration<Kno
         builder.ToTable("knowledge_chunks");
         builder.HasKey(chunk => chunk.Id);
         builder.Property(chunk => chunk.Content).IsRequired();
-        builder.Property(chunk => chunk.MetadataJson).HasColumnType("jsonb").IsRequired();
+        builder.Property(chunk => chunk.MetadataJson).HasColumnType("nvarchar(max)").IsRequired();
+        builder.HasIndex(chunk => new { chunk.DocumentId, chunk.ChunkIndex }).IsUnique();
         builder.HasIndex(chunk => new { chunk.TenantId, chunk.ApplicationId, chunk.DocumentId });
         builder.HasOne(chunk => chunk.Tenant)
             .WithMany(tenant => tenant.KnowledgeChunks)

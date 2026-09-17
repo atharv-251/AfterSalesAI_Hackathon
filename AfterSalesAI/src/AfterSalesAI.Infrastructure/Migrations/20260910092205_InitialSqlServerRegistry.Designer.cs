@@ -4,6 +4,7 @@ using AfterSalesAI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AfterSalesAI.Infrastructure.Migrations
 {
     [DbContext(typeof(AfterSalesAIDbContext))]
-    partial class AfterSalesAIDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260910092205_InitialSqlServerRegistry")]
+    partial class InitialSqlServerRegistry
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -63,378 +66,6 @@ namespace AfterSalesAI.Infrastructure.Migrations
                             Name = "Demo After-Sales Portal",
                             TenantId = new Guid("00000000-0000-0000-0000-000000000001")
                         });
-                });
-
-            modelBuilder.Entity("AfterSalesAI.Domain.DemoBomItem", b =>
-                {
-                    b.Property<string>("BomId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("AssemblyPartNo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ComponentPartNo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("Level")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Notes")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("QuantityPer")
-                        .HasPrecision(18, 3)
-                        .HasColumnType("decimal(18,3)");
-
-                    b.HasKey("BomId");
-
-                    b.HasIndex("AssemblyPartNo");
-
-                    b.HasIndex("ComponentPartNo");
-
-                    b.ToTable("Bom", "demo");
-                });
-
-            modelBuilder.Entity("AfterSalesAI.Domain.DemoClaimRecord", b =>
-                {
-                    b.Property<string>("ClaimId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<decimal>("ClaimAmountEur")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateOnly>("ClaimDate")
-                        .HasColumnType("date");
-
-                    b.Property<int>("ClaimQuantity")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ClaimType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DealerId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("PartNo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("PoNo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateOnly>("PurchaseDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ResolutionCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("ClaimId");
-
-                    b.HasIndex("DealerId");
-
-                    b.HasIndex("PartNo");
-
-                    b.HasIndex("PoNo");
-
-                    b.ToTable("Claims", "demo");
-                });
-
-            modelBuilder.Entity("AfterSalesAI.Domain.DemoDealer", b =>
-                {
-                    b.Property<string>("DealerId")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("City")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ContactEmail")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Country")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("CreditLimitEur")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("DealerName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateOnly>("OnboardedDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("Region")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Tier")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("DealerId");
-
-                    b.HasIndex("Status");
-
-                    b.ToTable("Dealers", "demo");
-                });
-
-            modelBuilder.Entity("AfterSalesAI.Domain.DemoInventoryItem", b =>
-                {
-                    b.Property<string>("InventoryId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("AvailableQuantity")
-                        .HasColumnType("int");
-
-                    b.Property<string>("BinLocation")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateOnly>("LastCountDate")
-                        .HasColumnType("date");
-
-                    b.Property<int>("OnHandQuantity")
-                        .HasColumnType("int");
-
-                    b.Property<string>("PartNo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("ReorderPoint")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ReservedQuantity")
-                        .HasColumnType("int");
-
-                    b.Property<string>("WarehouseLocation")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("InventoryId");
-
-                    b.HasIndex("PartNo");
-
-                    b.ToTable("Inventory", "demo");
-                });
-
-            modelBuilder.Entity("AfterSalesAI.Domain.DemoKnowledgeArticle", b =>
-                {
-                    b.Property<string>("DocumentId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("DocumentType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ErrorCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateOnly>("LastUpdated")
-                        .HasColumnType("date");
-
-                    b.Property<string>("Module")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("OwnerTeam")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Summary")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("DocumentId");
-
-                    b.HasIndex("ErrorCode");
-
-                    b.HasIndex("Module");
-
-                    b.ToTable("Knowledge", "demo");
-                });
-
-            modelBuilder.Entity("AfterSalesAI.Domain.DemoPart", b =>
-                {
-                    b.Property<string>("PartNo")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("HazmatFlag")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("LeadTimeDays")
-                        .HasColumnType("int");
-
-                    b.Property<string>("PartName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("SupplierId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SupplierName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("UnitPriceEur")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("WarrantyMonths")
-                        .HasColumnType("int");
-
-                    b.HasKey("PartNo");
-
-                    b.HasIndex("Status");
-
-                    b.ToTable("Parts", "demo");
-                });
-
-            modelBuilder.Entity("AfterSalesAI.Domain.DemoPurchaseOrder", b =>
-                {
-                    b.Property<string>("PoNo")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("PoLineNo")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DealerId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<decimal>("LineTotalEur")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateOnly>("OrderDate")
-                        .HasColumnType("date");
-
-                    b.Property<int>("OrderQuantity")
-                        .HasColumnType("int");
-
-                    b.Property<string>("PartNo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateOnly>("RequestedDeliveryDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("ShipmentId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("UnitPriceEur")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("PoNo", "PoLineNo");
-
-                    b.HasIndex("DealerId");
-
-                    b.HasIndex("PartNo");
-
-                    b.HasIndex("ShipmentId");
-
-                    b.ToTable("PurchaseOrders", "demo");
-                });
-
-            modelBuilder.Entity("AfterSalesAI.Domain.DemoShipment", b =>
-                {
-                    b.Property<string>("ShipmentId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateOnly?>("ActualDeliveryDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("Carrier")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DealerId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateOnly>("EstimatedDeliveryDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("PoNo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<DateOnly>("ShipDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("TrackingNo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("ShipmentId");
-
-                    b.HasIndex("DealerId");
-
-                    b.HasIndex("PoNo");
-
-                    b.HasIndex("Status");
-
-                    b.ToTable("Shipments", "demo");
                 });
 
             modelBuilder.Entity("AfterSalesAI.Domain.IntegrationSource", b =>
@@ -520,15 +151,9 @@ namespace AfterSalesAI.Infrastructure.Migrations
                     b.Property<Guid>("ApplicationId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("ChunkIndex")
-                        .HasColumnType("int");
-
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTimeOffset>("CreatedUtc")
-                        .HasColumnType("datetimeoffset");
 
                     b.Property<Guid>("DocumentId")
                         .HasColumnType("uniqueidentifier");
@@ -544,8 +169,7 @@ namespace AfterSalesAI.Infrastructure.Migrations
 
                     b.HasIndex("ApplicationId");
 
-                    b.HasIndex("DocumentId", "ChunkIndex")
-                        .IsUnique();
+                    b.HasIndex("DocumentId");
 
                     b.HasIndex("TenantId", "ApplicationId", "DocumentId");
 
@@ -561,9 +185,6 @@ namespace AfterSalesAI.Infrastructure.Migrations
                     b.Property<Guid>("ApplicationId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTimeOffset>("CreatedUtc")
-                        .HasColumnType("datetimeoffset");
-
                     b.Property<string>("DocumentType")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -577,16 +198,8 @@ namespace AfterSalesAI.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("SourcePath")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("UpdatedUtc")
-                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Version")
                         .IsRequired()
@@ -597,7 +210,7 @@ namespace AfterSalesAI.Infrastructure.Migrations
 
                     b.HasIndex("ApplicationId");
 
-                    b.HasIndex("TenantId", "ApplicationId", "SourcePath")
+                    b.HasIndex("TenantId", "ApplicationId", "Name", "Version")
                         .IsUnique();
 
                     b.ToTable("knowledge_documents", (string)null);

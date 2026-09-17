@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Pgvector.EntityFrameworkCore;
 
 namespace AfterSalesAI.Infrastructure;
 
@@ -9,10 +8,10 @@ public sealed class AfterSalesAIDbContextFactory : IDesignTimeDbContextFactory<A
     public AfterSalesAIDbContext CreateDbContext(string[] args)
     {
         var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__AfterSalesAI")
-            ?? "Host=localhost;Database=aftersalesai;Username=aftersales";
+            ?? "Server=(localdb)\\MSSQLLocalDB;Database=AfterSalesAI_Demo;Trusted_Connection=True;TrustServerCertificate=True";
 
         var options = new DbContextOptionsBuilder<AfterSalesAIDbContext>()
-            .UseNpgsql(connectionString, npgsqlOptions => npgsqlOptions.UseVector())
+            .UseSqlServer(connectionString)
             .Options;
 
         return new AfterSalesAIDbContext(options);

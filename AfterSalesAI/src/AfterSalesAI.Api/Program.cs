@@ -16,10 +16,35 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddSingleton<AssistantService>();
-builder.Services.AddPostgresInfrastructure(builder.Configuration);
+builder.Services.AddScoped<AssistantService>();
+builder.Services.AddSqlServerInfrastructure(builder.Configuration);
 
-var app = builder.Build();
+await using var app = builder.Build();
+
+if (builder.Configuration.GetValue<bool>("ingest-knowledge"))
+{
+    if (!Guid.TryParse(builder.Configuration["tenant-id"], out var tenantId) || tenantId == Guid.Empty
+        || !Guid.TryParse(builder.Configuration["application-id"], out var applicationId) || applicationId == Guid.Empty
+        || string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("AfterSalesAI")))
+    {
+        app.Logger.LogError("Offline ingestion requires --tenant-id, --application-id and a SQL Server connection string.");
+        Environment.ExitCode = 1;
+        return;
+    }
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var result = await scope.ServiceProvider.GetRequiredService<IKnowledgeIngestionService>().IngestAsync(tenantId, applicationId);
+        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(result));
+        if (result.Failures.Count > 0) Environment.ExitCode = 1;
+    }
+    catch (Exception exception)
+    {
+        app.Logger.LogError(exception, "Offline knowledge ingestion failed.");
+        Environment.ExitCode = 1;
+    }
+    return;
+}
 
 var connectionString = builder.Configuration.GetConnectionString("AfterSalesAI");
 if (!string.IsNullOrWhiteSpace(connectionString))

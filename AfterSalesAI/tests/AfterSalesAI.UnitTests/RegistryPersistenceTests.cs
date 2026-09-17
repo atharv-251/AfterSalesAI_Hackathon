@@ -83,7 +83,7 @@ public sealed class RegistryPersistenceTests
             CreateTool(Guid.NewGuid(), applicationId, activeSource, "other-tenant", true));
         dbContext.SaveChanges();
 
-        var tools = new PostgresToolRegistry(dbContext).GetAvailableTools(tenantId, applicationId);
+        var tools = new SqlServerToolRegistry(dbContext).GetAvailableTools(tenantId, applicationId);
 
         var tool = Assert.Single(tools);
         Assert.Equal("included", tool.Name);

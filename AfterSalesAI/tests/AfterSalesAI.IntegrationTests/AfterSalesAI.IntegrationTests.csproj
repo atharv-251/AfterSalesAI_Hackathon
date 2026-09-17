@@ -17,4 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\AfterSalesAI.Api\AfterSalesAI.Api.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\API_Documents\Project Documents\*.pdf" Link="TestDocuments\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AfterSalesAI.Infrastructure;
 
-public sealed class PostgresToolRegistry(AfterSalesAIDbContext dbContext) : IToolRegistry
+public sealed class SqlServerToolRegistry(AfterSalesAIDbContext dbContext) : IToolRegistry
 {
     public IReadOnlyCollection<ToolDefinition> GetAvailableTools(Guid tenantId, Guid applicationId) =>
         dbContext.ToolDefinitions
