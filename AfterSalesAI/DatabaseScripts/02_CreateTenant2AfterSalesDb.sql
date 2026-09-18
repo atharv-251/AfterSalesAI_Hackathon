@@ -221,7 +221,16 @@ BEGIN TRY
         (N'RO-2026-009',N'VEH-DEMO-008',N'Battery module fault',N'AwaitingParts',N'Urgent','20260908','20260914',NULL,6000),
         (N'RO-2026-010',N'VEH-DEMO-009',N'Cooling system warning',N'InRepair',N'Normal','20260915','20260921',NULL,26000),
         (N'RO-2026-011',N'VEH-DEMO-010',N'Historic brake repair',N'Completed',N'Normal','20240601','20240603','20240603',55000),
-        (N'RO-2026-012',N'VEH-DEMO-005',N'Cooling system repair completed',N'Completed',N'Normal','20260810','20260815','20260814',22000)
+        (N'RO-2026-012',N'VEH-DEMO-005',N'Cooling system repair completed',N'Completed',N'Normal','20260810','20260815','20260814',22000),
+        (N'RO-2026-013',N'VEH-DEMO-001',N'Cabin climate control fault',N'Diagnosing',N'Normal','20260919','20260924',NULL,18500),
+        (N'RO-2026-014',N'VEH-DEMO-002',N'Parking sensor warning',N'Booked',N'Normal','20260920','20260926',NULL,42500),
+        (N'RO-2026-015',N'VEH-DEMO-001',N'Brake pedal vibration',N'AwaitingParts',N'Urgent','20260914','20260919',NULL,18800),
+        (N'RO-2026-016',N'VEH-DEMO-002',N'Battery charge warning',N'InRepair',N'Urgent','20260916','20260923',NULL,42900),
+        (N'RO-2026-017',N'VEH-DEMO-001',N'Infotainment restart issue',N'Booked',N'Normal','20260921','20260927',NULL,19000),
+        (N'RO-2026-018',N'VEH-DEMO-002',N'Annual safety inspection',N'Completed',N'Normal','20260905','20260907','20260906',41800),
+        (N'RO-2026-019',N'VEH-DEMO-001',N'Headlamp moisture inspection',N'Diagnosing',N'Normal','20260918','20260922',NULL,19200),
+        (N'RO-2026-020',N'VEH-DEMO-002',N'Power steering noise',N'AwaitingParts',N'Urgent','20260912','20260918',NULL,43000),
+        (N'RO-2026-021',N'VEH-DEMO-001',N'Wiper motor replacement',N'Completed',N'Normal','20260908','20260910','20260909',19400)
     ) s(Number,Vehicle,Complaint,Status,Priority,Opened,Promised,Closed,Mileage)
     JOIN aftersales.Vehicles v ON v.VehicleReference=s.Vehicle
     WHERE NOT EXISTS (SELECT 1 FROM aftersales.RepairOrders r WHERE r.RepairOrderNumber=s.Number);
@@ -245,7 +254,16 @@ BEGIN TRY
         (N'RO-2026-010',2,N'COOL-01',2.50,85.00,200.00,N'Planned'),
         (N'RO-2026-011',1,N'BRAKE-01',2.00,65.00,180.00,N'Completed'),
         (N'RO-2026-012',1,N'DIAG-01',1.00,80.00,0.00,N'Completed'),
-        (N'RO-2026-012',2,N'COOL-01',2.50,80.00,200.00,N'Completed')
+        (N'RO-2026-012',2,N'COOL-01',2.50,80.00,200.00,N'Completed'),
+        (N'RO-2026-013',1,N'DIAG-01',1.00,80.00,0.00,N'Planned'),
+        (N'RO-2026-014',1,N'DIAG-01',1.00,75.00,0.00,N'Planned'),
+        (N'RO-2026-015',1,N'BRAKE-01',2.00,80.00,210.00,N'Waiting'),
+        (N'RO-2026-016',1,N'BATTERY-01',3.00,75.00,850.00,N'Planned'),
+        (N'RO-2026-017',1,N'DIAG-01',1.00,80.00,0.00,N'Planned'),
+        (N'RO-2026-018',1,N'BRAKE-01',2.00,75.00,160.00,N'Completed'),
+        (N'RO-2026-019',1,N'DIAG-01',1.00,80.00,0.00,N'Planned'),
+        (N'RO-2026-020',1,N'COOL-01',2.50,75.00,180.00,N'Waiting'),
+        (N'RO-2026-021',1,N'DIAG-01',1.00,80.00,90.00,N'Completed')
     ) s(Number,Line,Operation,Hours,Rate,Materials,Status)
     JOIN aftersales.RepairOrders r ON r.RepairOrderNumber=s.Number
     WHERE NOT EXISTS (SELECT 1 FROM aftersales.RepairLines l WHERE l.RepairOrderId=r.RepairOrderId AND l.LineNumber=s.Line);
@@ -259,7 +277,16 @@ BEGIN TRY
         (N'WC-004',N'RO-2026-006','20260918',NULL,N'Submitted',N'Diagnostic evidence pending',80.00,0.00),
         (N'WC-005',N'RO-2026-012','20260811','20260813',N'PartiallyApproved',N'Cooling component covered; diagnostic cost excluded',480.00,400.00),
         (N'WC-006',N'RO-2026-009','20260909',NULL,N'UnderReview',N'Battery replacement authorization pending',1940.00,0.00),
-        (N'WC-007',N'RO-2026-010','20260916','20260917',N'Approved',N'Cooling component manufacturing defect',497.50,497.50)
+        (N'WC-007',N'RO-2026-010','20260916','20260917',N'Approved',N'Cooling component manufacturing defect',497.50,497.50),
+        (N'WC-008',N'RO-2026-013','20260919',NULL,N'Submitted',N'Climate control diagnostic evidence pending',80.00,0.00),
+        (N'WC-009',N'RO-2026-014', '20260920',NULL,N'UnderReview',N'Parking sensor warranty eligibility review',75.00,0.00),
+        (N'WC-010',N'RO-2026-015','20260915',NULL,N'UnderReview',N'Brake vibration parts authorization pending',370.00,0.00),
+        (N'WC-011',N'RO-2026-016','20260917','20260918',N'PartiallyApproved',N'Battery module covered; labor excluded',1075.00,850.00),
+        (N'WC-012',N'RO-2026-017','20260921',NULL,N'Submitted',N'Infotainment software diagnosis submitted',80.00,0.00),
+        (N'WC-013',N'RO-2026-018','20260905','20260906',N'Approved',N'Safety inspection repair covered',310.00,310.00),
+        (N'WC-014',N'RO-2026-019','20260918',NULL,N'UnderReview',N'Headlamp sealing inspection under review',80.00,0.00),
+        (N'WC-015',N'RO-2026-020','20260913',NULL,N'Submitted',N'Power steering component assessment pending',367.50,0.00),
+        (N'WC-016',N'RO-2026-021','20260908','20260909',N'Approved',N'Wiper motor manufacturing fault confirmed',170.00,170.00)
     ) s(Number,Repair,Submitted,Decided,Status,Reason,Claimed,Approved)
     JOIN aftersales.RepairOrders r ON r.RepairOrderNumber=s.Repair
     WHERE NOT EXISTS (SELECT 1 FROM aftersales.WarrantyCases w WHERE w.CaseNumber=s.Number);

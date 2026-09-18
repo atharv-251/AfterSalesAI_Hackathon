@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 
-export const pages = ['dashboard', 'orders', 'deliveries', 'claims', 'inventory', 'knowledge', 'assistant'] as const
+export const pages = ['dashboard', 'orders', 'deliveries', 'claims', 'inventory', 'knowledge', 'service-overview', 'repair-status', 'warranty-summary', 'assistant'] as const
 export type Page = typeof pages[number]
 export const pageTitles: Record<Page, string> = {
   dashboard: 'Operations overview', orders: 'Orders', deliveries: 'Deliveries', claims: 'Claims',
-  inventory: 'Parts & inventory', knowledge: 'Knowledge & SOP', assistant: 'AI Assistant',
+  inventory: 'Parts & inventory', knowledge: 'Knowledge & SOP',
+  'service-overview': 'Service overview', 'repair-status': 'Repair status', 'warranty-summary': 'Warranty summary',
+  assistant: 'AI Assistant',
 }
 export type Route = { page: Page; filter: string }
 export function readRoute(): Route {

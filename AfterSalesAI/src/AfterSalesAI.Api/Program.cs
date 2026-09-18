@@ -67,7 +67,47 @@ if (builder.Configuration.GetValue<bool>("ingest-knowledge"))
 
 var connectionString = builder.Configuration.GetConnectionString("AfterSalesAI");
 using (var scope = app.Services.CreateScope())
-    await scope.ServiceProvider.GetRequiredService<DemoUserSeeder>().SeedAsync();
+{
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var databases = new List<(string Name, DbContext Context)>
+    {
+        ("AI Core", scope.ServiceProvider.GetRequiredService<AICoreDbContext>()),
+        ("Tenant 2", scope.ServiceProvider.GetRequiredService<Tenant2DbContext>())
+    };
+    if (!string.IsNullOrWhiteSpace(connectionString))
+        databases.Add(("AfterSalesAI", scope.ServiceProvider.GetRequiredService<AfterSalesAIDbContext>()));
+
+    foreach (var (name, database) in databases)
+    {
+        try
+        {
+            if (await database.Database.CanConnectAsync())
+                logger.LogInformation("Connected to {DatabaseName} database.", name);
+            else
+                logger.LogError("Could not connect to {DatabaseName} database.", name);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Could not connect to {DatabaseName} database.", name);
+        }
+    }
+}
+using (var scope = app.Services.CreateScope())
+{
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        var coreDatabase = scope.ServiceProvider.GetRequiredService<AICoreDbContext>().Database;
+        await coreDatabase.EnsureCreatedAsync();
+        await scope.ServiceProvider.GetRequiredService<DemoUserSeeder>().SeedAsync();
+        await scope.ServiceProvider.GetRequiredService<CoreTenantKnowledgeBootstrapper>().SeedTenant2Async();
+        logger.LogInformation("AI Core database initialization and demo-user seeding completed.");
+    }
+    catch (Exception exception)
+    {
+        logger.LogError(exception, "AI Core database initialization failed; the API will continue, but Core-backed requests may fail until SQL Server is available.");
+    }
+}
 if (!string.IsNullOrWhiteSpace(connectionString))
 {
     using var scope = app.Services.CreateScope();

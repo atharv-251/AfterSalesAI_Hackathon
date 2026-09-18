@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { askAssistant, tenantId } from '../data'
 import type { AssistantResponse } from '../data'
 import { Icon } from './Icon'
+import type { IconName } from './Icon'
 
 type Message = { id: number; role: 'user' | 'assistant'; text: string; response?: AssistantResponse; failed?: boolean; question?: string }
 export type ChatDraft = { text: string; token: number }
@@ -13,7 +14,7 @@ export function AnswerText({ text }: { text: string }) {
   })}</p>)}</>
 }
 
-export function AssistantChat({ open, onOpen, onClose, draft, suggestions, selectedTenantId = tenantId }: { open: boolean; onOpen: () => void; onClose: () => void; draft: ChatDraft | null; suggestions: string[]; selectedTenantId?: string }) {
+export function AssistantChat({ open, onOpen, onClose, draft, suggestions, selectedTenantId = tenantId, botIcon = 'assistant' }: { open: boolean; onOpen: () => void; onClose: () => void; draft: ChatDraft | null; suggestions: string[]; selectedTenantId?: string; botIcon?: IconName }) {
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
   const [busy, setBusy] = useState(false)
@@ -58,9 +59,9 @@ export function AssistantChat({ open, onOpen, onClose, draft, suggestions, selec
 
   return <>
     {open && <section className="chat-panel" role="dialog" aria-modal="false" aria-labelledby="chat-title" onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); close() } }}>
-      <header className="chat-header"><span className="chat-avatar"><Icon name="assistant" size={24} /></span><div><h2 id="chat-title">After-Sales AI</h2><span>Smart Workshop Assistant</span></div><button className="icon-button" onClick={close} aria-label="Minimize assistant"><Icon name="close" /></button></header>
+      <header className="chat-header"><span className="chat-avatar"><Icon name={botIcon} size={24} /></span><div><h2 id="chat-title">After-Sales AI</h2><span>Smart Workshop Assistant</span></div><button className="icon-button" onClick={close} aria-label="Minimize assistant"><Icon name="close" /></button></header>
       <div className="chat-conversation" role="log" aria-label="Assistant conversation" aria-live="polite" aria-relevant="additions text">
-        {!messages.length && <div className="chat-welcome"><span className="welcome-icon"><Icon name="assistant" size={30} /></span><h3>Your operations, in focus.</h3><p>Ask about an order, part, claim, or workshop alert. Answers use the existing operational data and knowledge service.</p></div>}
+        {!messages.length && <div className="chat-welcome"><span className="welcome-icon"><Icon name={botIcon} size={30} /></span><h3>Your operations, in focus.</h3><p>Ask about an order, part, claim, or workshop alert. Answers use the existing operational data and knowledge service.</p></div>}
         {messages.map(message => <article key={message.id} className={`chat-message ${message.role} ${message.failed ? 'failed' : ''}`}><span className="message-label">{message.role === 'user' ? 'You' : 'After-Sales AI'}</span><AnswerText text={message.text} />
           {message.response && <div className="message-sources"><strong>Information fetched from</strong>{message.response.sources.length ? <ul>{message.response.sources.map((source, i) => <li key={`${source}-${i}`}>{source}</li>)}</ul> : <span>No matching source</span>}</div>}
           {message.failed && <button className="text-button" disabled={busy} onClick={() => void send(message.question, message.id)}><Icon name="refresh" size={14} />Retry request</button>}
@@ -76,6 +77,6 @@ export function AssistantChat({ open, onOpen, onClose, draft, suggestions, selec
         <small>Enter to send · Shift+Enter for a new line</small>
       </form>
     </section>}
-    <button ref={launcherRef} className={`assistant-launcher ${open ? 'is-open' : ''}`} onClick={open ? close : onOpen} aria-expanded={open} aria-label={open ? 'Minimize AI Assistant' : 'Open AI Assistant'} title="AI Assistant"><Icon name="assistant" size={23} /><span>AI Assistant</span>{busy && <span className="launcher-busy" />}</button>
+    <button ref={launcherRef} className={`assistant-launcher ${open ? 'is-open' : ''}`} onClick={open ? close : onOpen} aria-expanded={open} aria-label={open ? 'Minimize AI Assistant' : 'Open AI Assistant'} title="AI Assistant"><Icon name={botIcon} size={23} /><span>AI Assistant</span>{busy && <span className="launcher-busy" />}</button>
   </>
 }

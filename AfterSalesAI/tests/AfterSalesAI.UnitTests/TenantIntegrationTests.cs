@@ -4,6 +4,7 @@ using AfterSalesAI.Application;
 using AfterSalesAI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace AfterSalesAI.UnitTests;
@@ -90,6 +91,32 @@ public sealed class TenantIntegrationTests
         })) { BaseAddress = new Uri("http://localhost/") };
         var result = await new Tenant2ApiClient(http, NullLogger<Tenant2ApiClient>.Instance).GetAsync("D001", DealerOperations.Overview);
         Assert.Equal("Available", result.Status);
+    }
+
+    [Fact]
+    public async Task Tenant1WrapperClient_UsesFixedRouteAndTenant1Context()
+    {
+        var wrapper = new DealerWrapperResponse(DemoTenants.Tenant1, "D001", "Available",
+            new Tenant1DealerData("D001", "Demo dealer", "Active", [], [], []),
+            Response() with { Operation = DealerOperations.Status }, "Correlated by DealerId only.");
+        using var http = new HttpClient(new Handler(request =>
+        {
+            Assert.Equal($"http://localhost/api/tenant1/wrapper/dealers/D001/repair-readiness?tenantId={DemoTenants.Tenant1:D}", request.RequestUri!.AbsoluteUri);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(wrapper) });
+        })) { BaseAddress = new Uri("http://localhost/") };
+        var result = await new Tenant1WrapperApiClient(http, NullLogger<Tenant1WrapperApiClient>.Instance)
+            .GetAsync("D001", DealerOperations.Status);
+        Assert.Equal("Available", result.Status);
+        Assert.Equal("D001", result.Data!.Tenant1Data.DealerId);
+    }
+
+    [Fact]
+    public void ServiceIntegrationAuthorizer_AcceptsOnlyConfiguredKey()
+    {
+        var authorizer = new ServiceIntegrationAuthorizer(Options.Create(new ServiceIntegrationOptions { ApiKey = "test-key" }));
+        Assert.True(authorizer.IsAuthorized("test-key"));
+        Assert.False(authorizer.IsAuthorized("other-key"));
+        Assert.False(authorizer.IsAuthorized(null));
     }
 
     [Fact]

@@ -1,11 +1,14 @@
 using AfterSalesAI.Application;
 using AfterSalesAI.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AfterSalesAI.Api.Controllers;
 
 [ApiController]
-public sealed class DealerIntegrationController(ITenant2DealerQueries tenant2, Tenant1WrapperService wrapper, CoreTenantGuard guard) : ControllerBase
+[AllowAnonymous]
+public sealed class DealerIntegrationController(ITenant2DealerQueries tenant2, Tenant1WrapperService wrapper, CoreTenantGuard guard,
+    ServiceIntegrationAuthorizer integrationAuthorizer) : ControllerBase
 {
     [HttpGet("api/tenant2/dealers/{dealerId}/service-overview")]
     public async Task<ActionResult<Tenant2DealerResponse>> ServiceOverview(string dealerId, [FromQuery] Guid tenantId, CancellationToken cancellationToken)
@@ -34,6 +37,7 @@ public sealed class DealerIntegrationController(ITenant2DealerQueries tenant2, T
     private async Task<ActionResult<Tenant2DealerResponse>> ReadTenant2(Guid tenantId, string dealerId, string operation, DateOnly? date, CancellationToken cancellationToken)
     {
         DemoTenants.Require(tenantId, DemoTenants.Tenant2);
+        RequireAuthorizedCaller(tenantId);
         await guard.RequireAsync(tenantId, operation, cancellationToken);
         var result = await tenant2.GetAsync(tenantId, dealerId, operation, date, cancellationToken);
         return result is null ? NotFound(new { message = "Tenant 2 dealer was not found." }) : Ok(result);
@@ -42,8 +46,16 @@ public sealed class DealerIntegrationController(ITenant2DealerQueries tenant2, T
     private async Task<ActionResult<DealerWrapperResponse>> ReadWrapper(Guid tenantId, string dealerId, string operation, CancellationToken cancellationToken)
     {
         DemoTenants.Require(tenantId, DemoTenants.Tenant1);
+        RequireAuthorizedCaller(tenantId);
         await guard.RequireAsync(tenantId, "wrapper-" + operation, cancellationToken);
         var result = await wrapper.GetAsync(tenantId, dealerId, operation, cancellationToken);
         return result is null ? NotFound(new { message = "Tenant 1 dealer was not found." }) : Ok(result);
+    }
+
+    private void RequireAuthorizedCaller(Guid tenantId)
+    {
+        if (!integrationAuthorizer.IsAuthorized(Request.Headers[ServiceIntegrationOptions.HeaderName].SingleOrDefault())
+            && !DemoAuthenticationService.HasTenant(User, tenantId))
+            throw new TenantAccessException();
     }
 }

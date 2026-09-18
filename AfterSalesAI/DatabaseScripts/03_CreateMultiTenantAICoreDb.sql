@@ -99,23 +99,45 @@ CREATE TABLE dbo.CoreChatMessages (
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.CoreChatMessages') AND name=N'IX_CoreChatMessages_Scope')
 CREATE INDEX IX_CoreChatMessages_Scope ON dbo.CoreChatMessages(TenantId,SessionId,CreatedDate);
 
-INSERT dbo.CoreTenants(TenantId,TenantCode,TenantName,ProductName,Description,TenantSystemPrompt,DatabaseConfigurationId,IsWrapperApiEnabled)
-SELECT s.Id,s.Code,s.Name,s.Product,s.Description,s.Prompt,s.DatabaseId,s.Wrapper
+-- An EF Core-created empty database already has this cyclic foreign key. Disable it
+-- temporarily so the required tenant and database-reference records can be inserted.
+DECLARE @CoreTenantForeignKey sysname =
+    (SELECT name FROM sys.foreign_keys
+     WHERE parent_object_id = OBJECT_ID(N'dbo.CoreTenants')
+       AND referenced_object_id = OBJECT_ID(N'dbo.CoreDatabaseConfigurations'));
+DECLARE @CoreTenantForeignKeyStatement nvarchar(max);
+IF @CoreTenantForeignKey IS NOT NULL
+BEGIN
+    SET @CoreTenantForeignKeyStatement = N'ALTER TABLE dbo.CoreTenants NOCHECK CONSTRAINT ' + QUOTENAME(@CoreTenantForeignKey);
+    EXEC(@CoreTenantForeignKeyStatement);
+END;
+
+INSERT dbo.CoreTenants(TenantId,TenantCode,TenantName,ProductName,Description,TenantSystemPrompt,DatabaseConfigurationId,IsWrapperApiEnabled,IsActive,CreatedDate,UpdatedDate)
+SELECT s.Id,s.Code,s.Name,s.Product,s.Description,s.Prompt,s.DatabaseId,s.Wrapper,1,SYSDATETIMEOFFSET(),SYSDATETIMEOFFSET()
 FROM (VALUES
 (CONVERT(uniqueidentifier,'00000000-0000-0000-0000-000000000001'),N'TENANT1',N'Parts and orders',N'After-sales parts',N'Existing parts ordering application',N'Answer from Tenant 1 sources. Combined service information is allowed only from an approved Tenant 1 wrapper response. Correlate by DealerId only, never assert order-to-repair matches.',CONVERT(uniqueidentifier,'40000000-0000-0000-0000-000000000001'),1),
 (CONVERT(uniqueidentifier,'00000000-0000-0000-0000-000000000002'),N'TENANT2',N'Vehicle service and warranty',N'After-sales workshop',N'Vehicle repairs and warranty decisions',N'Answer only from Tenant 2 service, repair and warranty sources. Never use Tenant 1 data or wrapper operations.',CONVERT(uniqueidentifier,'40000000-0000-0000-0000-000000000002'),0)
 ) s(Id,Code,Name,Product,Description,Prompt,DatabaseId,Wrapper)
 WHERE NOT EXISTS(SELECT 1 FROM dbo.CoreTenants t WHERE t.TenantId=s.Id);
-INSERT dbo.CoreDatabaseConfigurations(DatabaseConfigurationId,TenantId,ConfigurationReference,DatabaseName)
+UPDATE dbo.CoreTenants
+SET TenantSystemPrompt = N'Answer from Tenant 2 sources. Linked Tenant 1 parts, shipment and claim information is allowed only from the approved Tenant 1 wrapper response. Correlate by DealerId only, never assert order-to-repair matches.',
+    UpdatedDate = SYSDATETIMEOFFSET()
+WHERE TenantCode = N'TENANT2';
+INSERT dbo.CoreDatabaseConfigurations(DatabaseConfigurationId,TenantId,ConfigurationReference,DatabaseName,IsActive)
 SELECT DatabaseConfigurationId,TenantId,CASE TenantCode WHEN N'TENANT1' THEN N'ConnectionStrings:AfterSalesAI' ELSE N'ConnectionStrings:Tenant2' END,
-CASE TenantCode WHEN N'TENANT1' THEN N'AfterSalesAI_Demo' ELSE N'Tenant2DemoDb' END
+CASE TenantCode WHEN N'TENANT1' THEN N'AfterSalesAI_Demo' ELSE N'Tenant2DemoDb' END,1
 FROM dbo.CoreTenants t WHERE NOT EXISTS(SELECT 1 FROM dbo.CoreDatabaseConfigurations c WHERE c.DatabaseConfigurationId=t.DatabaseConfigurationId);
 IF NOT EXISTS(SELECT 1 FROM sys.foreign_keys WHERE name=N'FK_CoreTenant_DatabaseReference')
 ALTER TABLE dbo.CoreTenants ADD CONSTRAINT FK_CoreTenant_DatabaseReference FOREIGN KEY(TenantId,DatabaseConfigurationId)
 REFERENCES dbo.CoreDatabaseConfigurations(TenantId,DatabaseConfigurationId);
+IF @CoreTenantForeignKey IS NOT NULL
+BEGIN
+    SET @CoreTenantForeignKeyStatement = N'ALTER TABLE dbo.CoreTenants WITH CHECK CHECK CONSTRAINT ' + QUOTENAME(@CoreTenantForeignKey);
+    EXEC(@CoreTenantForeignKeyStatement);
+END;
 
-INSERT dbo.CoreOperations(OperationId,TenantId,OperationName,Description,Kind,BaseUrl,RelativeUrl,HttpMethod,IsWrapperApi,StoredProcedureName,AllowedParameters)
-SELECT NEWID(),t.TenantId,s.Name,s.Description,s.Kind,N'http://127.0.0.1:5088/',s.Route,N'GET',s.Wrapper,s.ProcedureName,N'{"dealerId":"uppercase business key"}'
+INSERT dbo.CoreOperations(OperationId,TenantId,OperationName,Description,Kind,BaseUrl,RelativeUrl,HttpMethod,Headers,RequestParameters,RequestBodyTemplate,ResponseMapping,TimeoutSeconds,IsWrapperApi,StoredProcedureName,AllowedParameters,IsActive)
+SELECT NEWID(),t.TenantId,s.Name,s.Description,s.Kind,N'http://127.0.0.1:5088/',s.Route,N'GET',N'{}',N'{}',N'{}',N'{}',10,s.Wrapper,s.ProcedureName,N'{"dealerId":"uppercase business key"}',1
 FROM (VALUES
 (N'TENANT1',N'local',N'Existing approved Tenant 1 operational queries',N'Database',N'',0,N''),
 (N'TENANT1',N'wrapper-service-overview',N'Dealer parts orders and vehicle repairs',N'Wrapper',N'api/tenant1/wrapper/dealers/{dealerId}/aftersales-overview',1,N''),
@@ -133,14 +155,22 @@ FROM (VALUES
 JOIN dbo.CoreTenants t ON t.TenantCode=s.Code
 WHERE NOT EXISTS(SELECT 1 FROM dbo.CoreOperations o WHERE o.TenantId=t.TenantId AND o.OperationName=s.Name);
 
-INSERT dbo.CoreDocuments(DocumentId,TenantId,FileName,FileType,FilePath,ExtractedText)
-SELECT CONVERT(uniqueidentifier,s.Id),t.TenantId,s.Name,N'.md',s.Name,s.Content FROM (VALUES
+INSERT dbo.CoreDocuments(DocumentId,TenantId,FileName,FileType,FilePath,ExtractedText,IsActive,UploadedDate)
+SELECT CONVERT(uniqueidentifier,s.Id),t.TenantId,s.Name,N'.md',s.Name,s.Content,1,SYSDATETIMEOFFSET() FROM (VALUES
 (N'TENANT1',N'50000000-0000-0000-0000-000000000001',N'parts-integration.md',N'Parts orders and shipments belong to Tenant 1. Compare workshop service data only through the approved dealer wrapper. DealerId is not proof that an order caused a repair delay. Keep parts claims and vehicle warranty amounts separate.'),
 (N'TENANT2',N'50000000-0000-0000-0000-000000000002',N'workshop-warranty.md',N'Repair workflow: Booked, Diagnosing, AwaitingParts, InRepair, Completed or Cancelled. Warranty decisions: Submitted, UnderReview, Approved, PartiallyApproved or Rejected. A pending warranty decision is not approval. An overdue repair has passed its promised date and is neither Completed nor Cancelled. Tenant 2 cannot use Tenant 1 tools.')
 ) s(Code,Id,Name,Content) JOIN dbo.CoreTenants t ON t.TenantCode=s.Code
 WHERE NOT EXISTS(SELECT 1 FROM dbo.CoreDocuments d WHERE d.DocumentId=CONVERT(uniqueidentifier,s.Id));
-INSERT dbo.CoreDocumentChunks(ChunkId,TenantId,DocumentId,ChunkSequence,ChunkContent)
-SELECT NEWID(),TenantId,DocumentId,0,ExtractedText FROM dbo.CoreDocuments d
+UPDATE dbo.CoreDocuments
+SET ExtractedText = N'Repair workflow: Booked, Diagnosing, AwaitingParts, InRepair, Completed or Cancelled. Warranty decisions: Submitted, UnderReview, Approved, PartiallyApproved or Rejected. A pending warranty decision is not approval. An overdue repair has passed its promised date and is neither Completed nor Cancelled. Tenant 2 may use approved Tenant 1 wrapper results only when correlated by DealerId; do not assert order-to-repair matches.'
+WHERE DocumentId = CONVERT(uniqueidentifier,'50000000-0000-0000-0000-000000000002');
+UPDATE c
+SET ChunkContent = d.ExtractedText
+FROM dbo.CoreDocumentChunks c
+JOIN dbo.CoreDocuments d ON d.TenantId = c.TenantId AND d.DocumentId = c.DocumentId
+WHERE d.DocumentId = CONVERT(uniqueidentifier,'50000000-0000-0000-0000-000000000002') AND c.ChunkSequence = 0;
+INSERT dbo.CoreDocumentChunks(ChunkId,TenantId,DocumentId,ChunkSequence,ChunkContent,CreatedDate)
+SELECT NEWID(),TenantId,DocumentId,0,ExtractedText,SYSDATETIMEOFFSET() FROM dbo.CoreDocuments d
 WHERE d.DocumentId IN ('50000000-0000-0000-0000-000000000001','50000000-0000-0000-0000-000000000002')
 AND NOT EXISTS(SELECT 1 FROM dbo.CoreDocumentChunks c WHERE c.TenantId=d.TenantId AND c.DocumentId=d.DocumentId);
 COMMIT TRANSACTION;

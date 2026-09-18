@@ -13,8 +13,8 @@ import { KnowledgePage } from './components/KnowledgePage'
 import { AssistantChat } from './components/AssistantChat'
 import type { ChatDraft } from './components/AssistantChat'
 import { StatusBadge } from './components/DataTable'
-import { CoreManagementPanel } from './components/CoreManagementPanel'
 import { LoginScreen } from './components/LoginScreen'
+import { Tenant2Operations } from './components/Tenant2Operations'
 
 export default function App() {
   const [user, setUser] = useState<CurrentUser | null>(null)
@@ -28,13 +28,22 @@ export default function App() {
 }
 
 function Tenant2Workspace({ tenantId, user, onLogout }: { tenantId: string; user: CurrentUser; onLogout: () => void }) {
-  const [open, setOpen] = useState(true)
-  return <main className="page-content">
-    <div className="user-bar"><span><strong>{user.displayName}</strong> · {user.tenantName}</span><button className="secondary" onClick={onLogout}>Sign out</button></div><h1>{user.productName}</h1>
-    <CoreManagementPanel tenantId={tenantId} />
-    <AssistantChat selectedTenantId={tenantId} open={open} onOpen={() => setOpen(true)} onClose={() => setOpen(false)} draft={null}
-      suggestions={['Show repair status for D001.', 'Show warranty decisions for D003.', 'Show repairs for T2ONLY-001.']} />
-  </main>
+  const route = useNavigation()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [navCollapsed, setNavCollapsed] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [draft, setDraft] = useState<ChatDraft | null>(null)
+  const ask = (text: string) => { setDraft(current => ({ text, token: (current?.token ?? 0) + 1 })); setChatOpen(true) }
+  const isOperationsPage = route.page === 'dashboard' || route.page === 'service-overview' || route.page === 'repair-status' || route.page === 'warranty-summary'
+  return <div className={`app-shell tenant2-workspace ${navCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <Sidebar page={route.page} tenant={2} collapsed={navCollapsed} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} onCollapse={() => setNavCollapsed(true)} onAssistant={() => setChatOpen(true)} />
+    <div className="workspace"><header className="topbar"><div className="topbar-context"><button className="icon-button mobile-menu" aria-label="Open navigation" aria-expanded={mobileOpen} onClick={() => setMobileOpen(true)}><Icon name="menu" /></button><button className="icon-button desktop-nav-toggle" onClick={() => setNavCollapsed(value => !value)} aria-label={navCollapsed ? 'Expand navigation' : 'Collapse navigation'} title={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}><Icon name={navCollapsed ? 'sidebar-expand' : 'sidebar-collapse'} /></button><span>WORKSPACE <span className="breadcrumb-divider">/</span> <strong>{pageTitles[route.page]}</strong></span></div><div className="tenant-context"><span className="tenant-dot" /><span>{user.tenantName}</span><span className="avatar" aria-label={user.displayName}>{user.displayName.slice(0, 2).toUpperCase()}</span><button className="secondary" onClick={onLogout}>Sign out</button></div></header>
+      <main className="page-content"><div className="page-heading"><div><span className="eyebrow">VEHICLE SERVICE WORKSPACE</span><h1>{pageTitles[route.page]}</h1><p>Live workshop repairs and warranty records from Tenant 2.</p></div><span className="connection-label">Tenant 2 SQL · API connected</span></div>
+        {isOperationsPage && <Tenant2Operations tenantId={tenantId} page={route.page} onAsk={ask} />}
+        {route.page === 'assistant' && <section className="surface assistant-home"><span className="welcome-icon"><Icon name="service" size={38} /></span><span className="eyebrow">VEHICLE SERVICE ASSISTANT</span><h2>Repair and warranty insights.</h2><p>Ask questions about live service, repair, and warranty records without leaving your workspace.</p><button className="primary" onClick={() => setChatOpen(true)}><Icon name="service" />Open AI Assistant</button></section>}
+      </main><footer className="app-footer"><strong>i-mobilothon 2026</strong><span>Team Name - Smart Workshop Assistance</span></footer></div>
+    <AssistantChat selectedTenantId={tenantId} botIcon="service" open={chatOpen} onOpen={() => setChatOpen(true)} onClose={() => setChatOpen(false)} draft={draft} suggestions={['Show repair status for D001.', 'Show warranty decisions for D003.', 'Show repairs for T2ONLY-001.']} />
+  </div>
 }
 
 function Tenant1Workspace({ user, onLogout }: { user: CurrentUser; onLogout: () => void }) {
@@ -45,9 +54,11 @@ function Tenant1Workspace({ user, onLogout }: { user: CurrentUser; onLogout: () 
   const [refresh, setRefresh] = useState(0)
   const [updated, setUpdated] = useState('')
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [navCollapsed, setNavCollapsed] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const [draft, setDraft] = useState<ChatDraft | null>(null)
   const [detail, setDetail] = useState<Detail | null>(null)
+  const [dashboardDataTab, setDashboardDataTab] = useState<'orders' | 'inventory'>('orders')
   const titleRef = useRef<HTMLHeadingElement>(null)
   useEffect(() => {
     const controller = new AbortController()
@@ -75,13 +86,12 @@ function Tenant1Workspace({ user, onLogout }: { user: CurrentUser; onLogout: () 
     'Show the dealer dashboard alerts.',
   ].filter((item, index, all) => all.indexOf(item) === index)
   const tableKey = `${route.page}:${route.filter}`
-  return <div className="app-shell">
+  return <div className={`app-shell ${navCollapsed ? 'sidebar-collapsed' : ''}`}>
     <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); titleRef.current?.focus() }}>Skip to main content</a>
-    <Sidebar page={route.page} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} onAssistant={() => setChatOpen(true)} />
+    <Sidebar page={route.page} tenant={1} collapsed={navCollapsed} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} onCollapse={() => setNavCollapsed(true)} onAssistant={() => setChatOpen(true)} />
     <div className="workspace">
-      <header className="topbar"><div className="topbar-context"><button className="icon-button mobile-menu" aria-label="Open navigation" aria-expanded={mobileOpen} onClick={() => setMobileOpen(true)}><Icon name="menu" /></button><span>WORKSPACE <span className="breadcrumb-divider">/</span> <strong>{route.page === 'dashboard' ? 'Dashboard' : pageTitles[route.page]}</strong></span></div><div className="tenant-context"><span className="tenant-dot" /><span>{user.tenantName}</span><span className="avatar" aria-label={user.displayName}>{user.displayName.slice(0, 2).toUpperCase()}</span><button className="secondary" onClick={onLogout}>Sign out</button></div></header>
+      <header className="topbar"><div className="topbar-context"><button className="icon-button mobile-menu" aria-label="Open navigation" aria-expanded={mobileOpen} onClick={() => setMobileOpen(true)}><Icon name="menu" /></button><button className="icon-button desktop-nav-toggle" onClick={() => setNavCollapsed(value => !value)} aria-label={navCollapsed ? 'Expand navigation' : 'Collapse navigation'} title={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}><Icon name={navCollapsed ? 'sidebar-expand' : 'sidebar-collapse'} /></button><span>WORKSPACE <span className="breadcrumb-divider">/</span> <strong>{route.page === 'dashboard' ? 'Dashboard' : pageTitles[route.page]}</strong></span></div><div className="tenant-context"><span className="tenant-dot" /><span>{user.tenantName}</span><span className="avatar" aria-label={user.displayName}>{user.displayName.slice(0, 2).toUpperCase()}</span><button className="secondary" onClick={onLogout}>Sign out</button></div></header>
       <main id="main-content" className="page-content">
-        <CoreManagementPanel tenantId="00000000-0000-0000-0000-000000000001" />
         <div className="page-heading"><div><span className="eyebrow">SMART WORKSHOP ASSISTANCE</span><h1 ref={titleRef} tabIndex={-1}>{pageTitles[route.page]}</h1><p>After-sales intelligence. One connected workspace.</p></div><div className="header-actions"><span className={`connection-label ${error ? 'connection-error' : ''}`}>{error ? 'Connection needs attention' : loading ? 'Connecting…' : 'Local SQL · API connected'}</span><button className="secondary" onClick={() => setRefresh(value => value + 1)} disabled={loading}><Icon name="refresh" size={16} />Refresh data</button></div></div>
         {error && <div className="error-banner" role="alert"><Icon name="alert" /><div>{error}{data && <small>Showing the last successfully loaded records.</small>}</div><button className="secondary" onClick={() => setRefresh(value => value + 1)} disabled={loading}>Retry</button></div>}
         {loading && !data && <div className="loading-surface" role="status"><span className="loading-ring" /><h2>Connecting your workshop</h2><p>Loading orders, claims and inventory…</p></div>}
@@ -95,7 +105,7 @@ function Tenant1Workspace({ user, onLogout }: { user: CurrentUser; onLogout: () 
             <KpiCard label="Parts in Stock" value={data.inventory.filter(row => row.availableQuantity > 0).reduce((sum, row) => sum + row.availableQuantity, 0)} detail="Available units across locations" icon="inventory" href={routeHref('inventory')} />
             <KpiCard label="Low Stock" value={data.inventory.filter(isLowStock).length} detail="At / below reorder level" icon="inventory" href={routeHref('inventory', 'low')} warning />
           </section>
-          <div className="dashboard-grid"><div className="dashboard-main"><OrdersTable rows={data.orders} onDetail={setDetail} /><InventoryTable rows={data.inventory} onDetail={setDetail} /></div><div className="dashboard-side">
+          <div className="dashboard-grid"><div className="dashboard-main"><section className="dashboard-data-tabs" aria-label="Operational records"><div role="tablist" aria-label="Operational records"><button role="tab" aria-selected={dashboardDataTab === 'orders'} className={dashboardDataTab === 'orders' ? 'active' : ''} onClick={() => setDashboardDataTab('orders')}>Order register</button><button role="tab" aria-selected={dashboardDataTab === 'inventory'} className={dashboardDataTab === 'inventory' ? 'active' : ''} onClick={() => setDashboardDataTab('inventory')}>Parts & inventory</button></div>{dashboardDataTab === 'orders' ? <OrdersTable rows={data.orders} onDetail={setDetail} /> : <InventoryTable rows={data.inventory} onDetail={setDetail} />}</section></div><div className="dashboard-side">
             <section className="surface activity-panel"><div className="section-heading"><h2>Recent alerts</h2><span className="alert-icon"><Icon name="alert" size={18} /></span></div><p className="muted">Latest operational signals</p><ul className="activity-list">{[...new Set(data.dashboard.recentAlerts)].slice(0, 5).map(alert => <li key={alert}><span className="activity-dot" /><p>{alert}</p></li>)}</ul>{!data.dashboard.recentAlerts.length && <p className="muted">No recent alerts reported.</p>}<button className="text-button" onClick={() => ask('Show the dealer dashboard alerts.')}>Ask for an alert summary <Icon name="arrow" size={16} /></button></section>
             <section className="surface activity-panel"><div className="section-heading"><h2>Claims snapshot</h2><Icon name="claims" size={18} /></div>{data.claims.filter(isOpenClaim).slice(0, 3).map(claim => <div className="claim-preview" key={claim.claimId}><strong>{claim.claimId}</strong><StatusBadge value={claim.status} /><p>{claim.reason}</p></div>)}{!data.claims.some(isOpenClaim) && <p className="muted">No open claims.</p>}<a className="text-button" href={routeHref('claims', 'open')}>View open claims <Icon name="arrow" size={16} /></a></section>
             <section className="insight-card"><Icon name="assistant" size={28} /><h2>From data to answers</h2><p>Ask a question in plain language. Your assistant connects operational facts with reference guidance.</p><button onClick={() => setChatOpen(true)}>Open AI Assistant <Icon name="arrow" size={16} /></button></section>

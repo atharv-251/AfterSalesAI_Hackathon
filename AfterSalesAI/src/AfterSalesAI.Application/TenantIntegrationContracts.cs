@@ -82,6 +82,13 @@ public interface ITenant2ApiClient
     Task<Tenant2FetchResult> GetAsync(string dealerId, string operation, CancellationToken cancellationToken = default);
 }
 
+public sealed record Tenant1WrapperFetchResult(string Status, DealerWrapperResponse? Data);
+
+public interface ITenant1WrapperApiClient
+{
+    Task<Tenant1WrapperFetchResult> GetAsync(string dealerId, string operation, CancellationToken cancellationToken = default);
+}
+
 public sealed class Tenant1WrapperService(ITenant1DealerQueries tenant1, ITenant2ApiClient tenant2)
 {
     public async Task<DealerWrapperResponse?> GetAsync(Guid tenantId, string dealerId, string operation, CancellationToken cancellationToken = default)

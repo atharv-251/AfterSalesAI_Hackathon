@@ -6,8 +6,8 @@ using AfterSalesAI.Application;
 
 namespace AfterSalesAI.Infrastructure;
 
-public sealed class TenantAssistantService(AssistantService tenant1Assistant, ITenant2DealerQueries tenant2,
-    ITenant1DealerQueries tenant1, ILlmAnswerGenerator llm, CoreTenantGuard guard,
+public sealed class TenantAssistantService(AssistantService tenant1Assistant, Tenant1WrapperService tenant1Wrapper,
+    ITenant1WrapperApiClient tenant1WrapperApi, ITenant2DealerQueries tenant2, ILlmAnswerGenerator llm, CoreTenantGuard guard,
     CoreKnowledgeRetriever documents, TenantLlmContext llmContext)
 {
     public async Task<AssistantResponse> HandleAsync(AssistantRequest request, CancellationToken cancellationToken)
@@ -26,10 +26,13 @@ public sealed class TenantAssistantService(AssistantService tenant1Assistant, IT
             .Any(x => message.Contains(x, StringComparison.OrdinalIgnoreCase));
         var mentionsTenant1 = new[] { "tenant 1", "tenant1", "order", "shipment", "delivery", "inventory", "part", "claim" }
             .Any(x => message.Contains(x, StringComparison.OrdinalIgnoreCase));
-        var combinedQuestion = message.Contains("combined", StringComparison.OrdinalIgnoreCase)
+        var linkedQuestion = message.Contains("combined", StringComparison.OrdinalIgnoreCase)
             || message.Contains("both", StringComparison.OrdinalIgnoreCase)
-            || mentionsTenant1 && mentionsTenant2;
-        var targetTenant = mentionsTenant2 && !mentionsTenant1 ? DemoTenants.Tenant2 : DemoTenants.Tenant1;
+            || message.Contains("linked", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("cross tenant", StringComparison.OrdinalIgnoreCase)
+            || signedInTenant == DemoTenants.Tenant1 && mentionsTenant2
+            || signedInTenant == DemoTenants.Tenant2 && mentionsTenant1;
+        var targetTenant = signedInTenant;
         var targetApplication = targetTenant == DemoTenants.Tenant1
             ? Guid.Parse("20000000-0000-0000-0000-000000000001") : Guid.Parse("20000000-0000-0000-0000-000000000002");
         llmContext.SystemPrompt = (await guard.RequireAsync(targetTenant, cancellationToken: cancellationToken)).TenantSystemPrompt;
@@ -47,7 +50,7 @@ public sealed class TenantAssistantService(AssistantService tenant1Assistant, IT
             }
             if (targetTenant == DemoTenants.Tenant2) return new AssistantResponse("No matching Tenant 2 document was found.", "NO_MATCH", [], ["documents"]);
         }
-        if (targetTenant == DemoTenants.Tenant1 && !combinedQuestion)
+        if (targetTenant == DemoTenants.Tenant1 && !linkedQuestion)
         {
             await guard.RequireAsync(targetTenant, "local", cancellationToken);
             return await tenant1Assistant.HandleAsync(request with { TenantId = targetTenant, ApplicationId = targetApplication }, cancellationToken);
@@ -60,29 +63,77 @@ public sealed class TenantAssistantService(AssistantService tenant1Assistant, IT
         var operation = message.Contains("warranty", StringComparison.OrdinalIgnoreCase) || message.Contains("claim", StringComparison.OrdinalIgnoreCase)
             ? DealerOperations.Warranty : new[] { "status", "overdue", "readiness", "awaiting", "delay" }.Any(x => message.Contains(x, StringComparison.OrdinalIgnoreCase))
                 ? DealerOperations.Status : DealerOperations.Overview;
+        if (linkedQuestion)
+        {
+            DealerWrapperResponse? integration;
+            if (signedInTenant == DemoTenants.Tenant1)
+            {
+                await guard.RequireAsync(DemoTenants.Tenant1, "wrapper-" + operation, cancellationToken);
+                integration = await tenant1Wrapper.GetAsync(DemoTenants.Tenant1, dealerId, operation, cancellationToken);
+            }
+            else
+            {
+                await guard.RequireAsync(DemoTenants.Tenant2, "db-" + operation, cancellationToken);
+                integration = (await tenant1WrapperApi.GetAsync(dealerId, operation, cancellationToken)).Data;
+            }
+            if (integration is null) return new AssistantResponse("No linked dealer record matched in the approved integration.", "NO_MATCH", [], ["multi_application_data"]);
+            var linkedSource = $"Approved linked Tenant 1 and Tenant 2 data ({dealerId})";
+            var linkedGrounding = CreateLinkedGrounding(integration, operation);
+            var linkedAnswer = llm.IsAvailable ? await llm.GenerateAsync(new LlmAnswerGenerationRequest(message,
+                [new LlmGroundingSource(linkedSource, linkedGrounding)], LlmAnswerMode.OperationalResponse,
+                AssistantIntent.StatusOrException, ResponseLength.Concise), cancellationToken) : null;
+            return new AssistantResponse(string.IsNullOrWhiteSpace(linkedAnswer)
+                    ? "I couldn't generate the linked-data answer right now. Please try again shortly."
+                    : linkedAnswer,
+                "MULTI_APPLICATION", [linkedSource], ["multi_application_data"]);
+        }
         await guard.RequireAsync(DemoTenants.Tenant2, "db-" + operation, cancellationToken);
-        object? data;
-        string source;
-        if (combinedQuestion)
-        {
-            var tenant1Data = await tenant1.GetAsync(DemoTenants.Tenant1, dealerId, operation, cancellationToken);
-            var tenant2Data = await tenant2.GetAsync(DemoTenants.Tenant2, dealerId, operation, cancellationToken: cancellationToken);
-            data = new { DealerId = dealerId, Tenant1Data = tenant1Data, Tenant2Data = tenant2Data,
-                Correlation = "DealerId correlates application accounts only; it does not transaction-match orders and repairs." };
-            source = $"Approved multi-application data: Tenant 1 and Tenant 2 ({dealerId})";
-        }
-        else
-        {
-            source = $"Tenant 2 approved operation: {operation} ({dealerId})";
-            data = await tenant2.GetAsync(DemoTenants.Tenant2, dealerId, operation, cancellationToken: cancellationToken);
-        }
+        var source = $"Tenant 2 approved operation: {operation} ({dealerId})";
+        var data = await tenant2.GetAsync(DemoTenants.Tenant2, dealerId, operation, cancellationToken: cancellationToken);
         if (data is null) return new AssistantResponse("No dealer record matched in the selected tenant.", "NO_MATCH", [], [operation]);
         var grounding = JsonSerializer.Serialize(data);
         var answer = llm.IsAvailable ? await llm.GenerateAsync(new LlmAnswerGenerationRequest(message,
             [new LlmGroundingSource(source, grounding)], LlmAnswerMode.OperationalResponse), cancellationToken) : null;
         return new AssistantResponse(string.IsNullOrWhiteSpace(answer) ? grounding : answer,
-            combinedQuestion ? "MULTI_APPLICATION" : "TENANT2_DATA", [source], [combinedQuestion ? "multi_application_data" : operation]);
+            "TENANT2_DATA", [source], [operation]);
     }
 
     private static AssistantResponse Unavailable() => new("The approved wrapper service is unavailable. Please try again shortly.", "UNAVAILABLE", [], []);
+
+    private static string CreateLinkedGrounding(DealerWrapperResponse integration, string operation)
+    {
+        var tenant2 = integration.Tenant2Data;
+        return JsonSerializer.Serialize(new
+        {
+            DealerId = integration.DealerId,
+            integration.IntegrationStatus,
+            Tenant1 = new
+            {
+                integration.Tenant1Data.DealerName,
+                integration.Tenant1Data.Status,
+                Orders = operation == DealerOperations.Warranty ? [] : integration.Tenant1Data.Orders.Take(5).Select(order => new
+                {
+                    order.OrderNumber, order.PartNumber, order.Quantity, order.Status, order.RequestedDeliveryDate
+                }),
+                Shipments = operation == DealerOperations.Warranty ? [] : integration.Tenant1Data.Shipments.Take(5).Select(shipment => new
+                {
+                    shipment.ShipmentId, shipment.OrderNumber, shipment.Status, shipment.EstimatedDeliveryDate, shipment.ActualDeliveryDate
+                }),
+                Claims = operation == DealerOperations.Warranty ? integration.Tenant1Data.Claims.Take(5) : []
+            },
+            Tenant2 = tenant2 is null ? null : new
+            {
+                tenant2.EvaluationDate,
+                Repairs = operation == DealerOperations.Warranty ? [] : tenant2.Repairs
+                    .Where(repair => repair.Status != "Completed" && repair.Status != "Cancelled").Take(8).Select(repair => new
+                    {
+                        repair.RepairOrderNumber, repair.Complaint, repair.Status, repair.Priority, repair.PromisedDate, repair.IsOverdue
+                    }),
+                Events = operation == DealerOperations.Status ? tenant2.Events.Take(5) : [],
+                WarrantySummary = operation == DealerOperations.Warranty ? tenant2.WarrantySummary : null,
+                WarrantyCases = operation == DealerOperations.Warranty ? tenant2.WarrantyCases.Take(5) : []
+            },
+            Correlation = "DealerId only. Do not infer order-to-repair matches."
+        });
+    }
 }
