@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { formatNumber, isDeliveryException, isInDelivery, isLowStock, isOpenClaim, isOpenOrder, loadOperations } from './data'
+import { currentUser, formatNumber, isDeliveryException, isInDelivery, isLowStock, isOpenClaim, isOpenOrder, loadOperations, logout } from './data'
+import type { CurrentUser } from './data'
 import type { OperationsData } from './data'
 import { pageTitles, routeHref, useNavigation } from './navigation'
 import { Sidebar } from './components/Navigation'
@@ -12,8 +13,31 @@ import { KnowledgePage } from './components/KnowledgePage'
 import { AssistantChat } from './components/AssistantChat'
 import type { ChatDraft } from './components/AssistantChat'
 import { StatusBadge } from './components/DataTable'
+import { CoreManagementPanel } from './components/CoreManagementPanel'
+import { LoginScreen } from './components/LoginScreen'
 
 export default function App() {
+  const [user, setUser] = useState<CurrentUser | null>(null)
+  const [checking, setChecking] = useState(true)
+  useEffect(() => { currentUser().then(setUser).finally(() => setChecking(false)) }, [])
+  if (checking) return <main className="login-shell">Checking sign-in…</main>
+  if (!user) return <LoginScreen onLogin={setUser} />
+  const signOut = () => { void logout().finally(() => setUser(null)) }
+  return user.tenantId === '00000000-0000-0000-0000-000000000001'
+    ? <Tenant1Workspace user={user} onLogout={signOut} /> : <Tenant2Workspace tenantId={user.tenantId} user={user} onLogout={signOut} />
+}
+
+function Tenant2Workspace({ tenantId, user, onLogout }: { tenantId: string; user: CurrentUser; onLogout: () => void }) {
+  const [open, setOpen] = useState(true)
+  return <main className="page-content">
+    <div className="user-bar"><span><strong>{user.displayName}</strong> · {user.tenantName}</span><button className="secondary" onClick={onLogout}>Sign out</button></div><h1>{user.productName}</h1>
+    <CoreManagementPanel tenantId={tenantId} />
+    <AssistantChat selectedTenantId={tenantId} open={open} onOpen={() => setOpen(true)} onClose={() => setOpen(false)} draft={null}
+      suggestions={['Show repair status for D001.', 'Show warranty decisions for D003.', 'Show repairs for T2ONLY-001.']} />
+  </main>
+}
+
+function Tenant1Workspace({ user, onLogout }: { user: CurrentUser; onLogout: () => void }) {
   const route = useNavigation()
   const [data, setData] = useState<OperationsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -55,8 +79,9 @@ export default function App() {
     <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); titleRef.current?.focus() }}>Skip to main content</a>
     <Sidebar page={route.page} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} onAssistant={() => setChatOpen(true)} />
     <div className="workspace">
-      <header className="topbar"><div className="topbar-context"><button className="icon-button mobile-menu" aria-label="Open navigation" aria-expanded={mobileOpen} onClick={() => setMobileOpen(true)}><Icon name="menu" /></button><span>WORKSPACE <span className="breadcrumb-divider">/</span> <strong>{route.page === 'dashboard' ? 'Dashboard' : pageTitles[route.page]}</strong></span></div><div className="tenant-context"><span className="tenant-dot" /><span>Demo tenant</span><span className="avatar" aria-label="Smart Workshop">SW</span></div></header>
+      <header className="topbar"><div className="topbar-context"><button className="icon-button mobile-menu" aria-label="Open navigation" aria-expanded={mobileOpen} onClick={() => setMobileOpen(true)}><Icon name="menu" /></button><span>WORKSPACE <span className="breadcrumb-divider">/</span> <strong>{route.page === 'dashboard' ? 'Dashboard' : pageTitles[route.page]}</strong></span></div><div className="tenant-context"><span className="tenant-dot" /><span>{user.tenantName}</span><span className="avatar" aria-label={user.displayName}>{user.displayName.slice(0, 2).toUpperCase()}</span><button className="secondary" onClick={onLogout}>Sign out</button></div></header>
       <main id="main-content" className="page-content">
+        <CoreManagementPanel tenantId="00000000-0000-0000-0000-000000000001" />
         <div className="page-heading"><div><span className="eyebrow">SMART WORKSHOP ASSISTANCE</span><h1 ref={titleRef} tabIndex={-1}>{pageTitles[route.page]}</h1><p>After-sales intelligence. One connected workspace.</p></div><div className="header-actions"><span className={`connection-label ${error ? 'connection-error' : ''}`}>{error ? 'Connection needs attention' : loading ? 'Connecting…' : 'Local SQL · API connected'}</span><button className="secondary" onClick={() => setRefresh(value => value + 1)} disabled={loading}><Icon name="refresh" size={16} />Refresh data</button></div></div>
         {error && <div className="error-banner" role="alert"><Icon name="alert" /><div>{error}{data && <small>Showing the last successfully loaded records.</small>}</div><button className="secondary" onClick={() => setRefresh(value => value + 1)} disabled={loading}>Retry</button></div>}
         {loading && !data && <div className="loading-surface" role="status"><span className="loading-ring" /><h2>Connecting your workshop</h2><p>Loading orders, claims and inventory…</p></div>}

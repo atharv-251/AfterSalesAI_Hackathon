@@ -14,7 +14,8 @@ public sealed class LlmAasAnswerGenerator(
     HttpClient llmClient,
     IHttpClientFactory httpClientFactory,
     IOptions<LlmAasOptions> options,
-    ILogger<LlmAasAnswerGenerator> logger) : ILlmAnswerGenerator
+    ILogger<LlmAasAnswerGenerator> logger,
+    TenantLlmContext? tenantContext = null) : ILlmAnswerGenerator
 {
     private const string TokenClientName = "LlmAasCloudIdp";
     private readonly SemaphoreSlim _tokenLock = new(1, 1);
@@ -55,7 +56,15 @@ public sealed class LlmAasAnswerGenerator(
             }
 
             var systemPrompt = BuildSystemPrompt(request);
-            estimatedInputTokens = EstimateTokenCount(systemPrompt.Length + groundedPrompt.Length);
+            if (!string.IsNullOrWhiteSpace(tenantContext?.SystemPrompt))
+                systemPrompt += "\nTenant-specific guidance (does not authorize additional data access): " + tenantContext.SystemPrompt;
+            var messages = new List<object> { new { role = "system", content = systemPrompt } };
+            if (tenantContext is not null)
+                foreach (var turn in tenantContext.History)
+                    if (turn.Role is "user" or "assistant") messages.Add(new { role = turn.Role, content = turn.Content });
+            messages.Add(new { role = "user", content = groundedPrompt });
+            estimatedInputTokens = EstimateTokenCount(systemPrompt.Length + groundedPrompt.Length
+                + (tenantContext?.History.Sum(x => x.Content.Length) ?? 0));
             tokenAcquisitionStopwatch = Stopwatch.StartNew();
             var accessToken = await GetAccessTokenAsync(cancellationToken);
             tokenAcquisitionStopwatch.Stop();
@@ -70,19 +79,7 @@ public sealed class LlmAasAnswerGenerator(
                 Content = JsonContent.Create(new
                 {
                     model = settings.Model,
-                    messages = new[]
-                    {
-                        new
-                        {
-                            role = "system",
-                            content = systemPrompt
-                        },
-                        new
-                        {
-                            role = "user",
-                            content = groundedPrompt
-                        }
-                    },
+                    messages,
                     max_tokens = settings.MaxOutputTokens
                 })
             };
