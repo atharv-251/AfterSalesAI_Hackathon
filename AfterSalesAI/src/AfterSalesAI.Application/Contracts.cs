@@ -59,13 +59,15 @@ public sealed record KnowledgeSearchResult(string DocumentName, string SourcePat
 public sealed record AssistantRequest(
     Guid TenantId,
     Guid? ApplicationId,
-    string Message);
+    string Message,
+    Guid? SessionId = null);
 
 public sealed record AssistantResponse(
     string Answer,
     string Decision,
     IReadOnlyCollection<string> Sources,
-    IReadOnlyCollection<string>? ToolsExecuted = null);
+    IReadOnlyCollection<string>? ToolsExecuted = null,
+    Guid? SessionId = null);
 
 public sealed record OperationalSearchRecord(string Category, string Source, string Content);
 

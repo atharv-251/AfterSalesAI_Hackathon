@@ -1,16 +1,18 @@
-# AfterSalesAI — Hackathon Project Scaffold
+# AfterSalesAI — Multi-tenant Demo
 
-This repository is the initial implementation scaffold for the AI After-Sales Intelligence & Orchestration Assistant.
+The demo preserves the existing Tenant 1 parts application and adds separate Tenant 2 vehicle service data, HTTP wrappers, AI Core configuration and tenant-scoped chat persistence.
+
+**Start here:** [Multi-tenant setup, API routes, validation and remaining limitations](docs/multi-tenant-setup.md). Run database scripts `02_CreateTenant2AfterSalesDb.sql` and `03_CreateMultiTenantAICoreDb.sql`, then restart the API. Existing Tenant 1 business data must not be recreated.
 
 ## Implemented foundation
 
-The Phase 1 registry foundation persists tenant, application, integration source, tool, knowledge-document, and knowledge-chunk metadata in PostgreSQL. The API uses the PostgreSQL registry when `ConnectionStrings__AfterSalesAI` is configured; otherwise it preserves the in-memory scaffold registry for local UI/API runs without a database.
+The API uses SQL Server with fixed contexts for AfterSalesAI_Demo, Tenant2DemoDb and MultiTenantAICoreDb. Original Tenant 1 knowledge rows remain preserved; runtime retrieval, new uploads and tenant-scoped sessions use Core. An explicit transfer command copies eligible legacy knowledge. See the setup guide for scope limitations rather than assuming every configuration field is dynamically executable.
 
 See `docs/README.md` for local configuration and `docs/phase-1-registry-foundation.md` for persistence decisions.
 
 ## Architecture
 
-React + TypeScript → ASP.NET Core/.NET 10 → AI Orchestrator → Tool Registry → API / Database adapters + RAG → PostgreSQL/pgvector → LLMaaS
+React + TypeScript → ASP.NET Core/.NET 10 → tenant/operation validation → fixed API/database operations and keyword document retrieval → SQL Server / VW LLMaaS. Tenant 1 combined requests use HTTP wrappers; no cross-database business joins.
 
 ## Key design principles
 

@@ -1,0 +1,57 @@
+@base = http://127.0.0.1:5088
+@tenant1 = 00000000-0000-0000-0000-000000000001
+@tenant2 = 00000000-0000-0000-0000-000000000002
+
+### Tenant selection
+GET {{base}}/api/core/tenants
+
+### Tenant 1 local records
+GET {{base}}/api/orders?tenantId={{tenant1}}
+
+### Tenant 2 local data
+GET {{base}}/api/tenant2/dealers/D001/service-overview?tenantId={{tenant2}}
+
+### Combined dealer overview through HTTP
+GET {{base}}/api/tenant1/wrapper/dealers/D001/aftersales-overview?tenantId={{tenant1}}
+
+### Combined repair readiness
+GET {{base}}/api/tenant1/wrapper/dealers/D002/repair-readiness?tenantId={{tenant1}}
+
+### Separate claim and warranty results
+GET {{base}}/api/tenant1/wrapper/dealers/D003/claims-warranty-summary?tenantId={{tenant1}}
+
+### Missing upstream record: 200, integrationStatus NotFound, Tenant1Data retained
+GET {{base}}/api/tenant1/wrapper/dealers/D004/aftersales-overview?tenantId={{tenant1}}
+
+### Wrong tenant: 403
+GET {{base}}/api/tenant1/wrapper/dealers/D001/aftersales-overview?tenantId={{tenant2}}
+
+### Wrong tenant for Tenant 2 query: 403
+GET {{base}}/api/tenant2/dealers/D001/service-overview?tenantId={{tenant1}}
+
+### Tenant 1 wrapper chatbot
+POST {{base}}/api/assistant/chat
+Content-Type: application/json
+
+{"tenantId":"{{tenant1}}","message":"Show combined repairs for D001"}
+
+### Tenant 2 chatbot
+POST {{base}}/api/assistant/chat
+Content-Type: application/json
+
+{"tenantId":"{{tenant2}}","message":"Show warranty for D003"}
+
+### Tenant 2 scoped document guidance
+POST {{base}}/api/assistant/chat
+Content-Type: application/json
+
+{"tenantId":"{{tenant2}}","message":"Explain warranty workflow"}
+
+### Cross-tenant document: 404
+GET {{base}}/api/core/documents/50000000-0000-0000-0000-000000000002?tenantId={{tenant1}}
+
+### Approved operations
+GET {{base}}/api/core/operations?tenantId={{tenant2}}
+
+### Saved Tenant 2 chat sessions
+GET {{base}}/api/core/sessions?tenantId={{tenant2}}

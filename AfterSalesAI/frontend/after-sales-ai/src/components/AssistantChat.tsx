@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { askAssistant } from '../data'
+import { askAssistant, tenantId } from '../data'
 import type { AssistantResponse } from '../data'
 import { Icon } from './Icon'
 
@@ -13,12 +13,13 @@ export function AnswerText({ text }: { text: string }) {
   })}</p>)}</>
 }
 
-export function AssistantChat({ open, onOpen, onClose, draft, suggestions }: { open: boolean; onOpen: () => void; onClose: () => void; draft: ChatDraft | null; suggestions: string[] }) {
+export function AssistantChat({ open, onOpen, onClose, draft, suggestions, selectedTenantId = tenantId }: { open: boolean; onOpen: () => void; onClose: () => void; draft: ChatDraft | null; suggestions: string[]; selectedTenantId?: string }) {
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
   const [busy, setBusy] = useState(false)
   const busyRef = useRef(false)
   const sequence = useRef(0)
+  const session = useRef<string | undefined>(undefined)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const launcherRef = useRef<HTMLButtonElement>(null)
   const endRef = useRef<HTMLDivElement>(null)
@@ -41,7 +42,8 @@ export function AssistantChat({ open, onOpen, onClose, draft, suggestions }: { o
     controllerRef.current = controller
     const timeout = window.setTimeout(() => controller.abort(), 90000)
     try {
-      const response = await askAssistant(text, controller.signal)
+      const response = await askAssistant(text, controller.signal, selectedTenantId, session.current)
+      session.current = response.sessionId
       setMessages(current => [...current, { id: ++sequence.current, role: 'assistant', text: response.answer, response }])
     } catch (error) {
       setMessages(current => [...current, { id: ++sequence.current, role: 'assistant', failed: true, question: text,
