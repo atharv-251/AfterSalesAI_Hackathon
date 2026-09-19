@@ -2,14 +2,28 @@ using AfterSalesAI.Application;
 using AfterSalesAI.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AfterSalesAI.Api.Controllers;
 
 [ApiController]
 [AllowAnonymous]
-public sealed class DealerIntegrationController(ITenant2DealerQueries tenant2, Tenant1WrapperService wrapper, CoreTenantGuard guard,
+public sealed class DealerIntegrationController(ITenant2DealerQueries tenant2, Tenant1WrapperService wrapper, Tenant2DbContext tenant2Db, CoreTenantGuard guard,
     ServiceIntegrationAuthorizer integrationAuthorizer) : ControllerBase
 {
+    [HttpGet("api/tenant2/dealers")]
+    public async Task<ActionResult<IReadOnlyList<ServiceDealerDto>>> Dealers([FromQuery] Guid tenantId, CancellationToken cancellationToken)
+    {
+        DemoTenants.Require(tenantId, DemoTenants.Tenant2);
+        RequireAuthorizedCaller(tenantId);
+        await guard.RequireAsync(tenantId, DealerOperations.Overview, cancellationToken);
+        return Ok(await tenant2Db.Dealers.AsNoTracking()
+            .Where(dealer => dealer.IsActive)
+            .OrderBy(dealer => dealer.DealerId)
+            .Select(dealer => new ServiceDealerDto(dealer.DealerId, dealer.DealerName, dealer.IsActive))
+            .ToListAsync(cancellationToken));
+    }
+
     [HttpGet("api/tenant2/dealers/{dealerId}/service-overview")]
     public async Task<ActionResult<Tenant2DealerResponse>> ServiceOverview(string dealerId, [FromQuery] Guid tenantId, CancellationToken cancellationToken)
         => await ReadTenant2(tenantId, dealerId, DealerOperations.Overview, null, cancellationToken);

@@ -7,6 +7,7 @@ import { DataTable, StatusBadge } from './DataTable'
 type Repair = { repairOrderNumber: string; vehicleReference: string; modelName: string; complaint: string; status: string; priority: string; openedDate: string; promisedDate: string; closedDate?: string; estimatedAmountEur: number; isOverdue: boolean }
 type Warranty = { repairOrderNumber: string; caseNumber: string; status: string; reason: string; submittedDate: string; decisionDate?: string; claimedAmountEur: number; approvedAmountEur: number }
 type Result = { dealer: { dealerId: string; dealerName: string; isActive: boolean }; repairs: Repair[]; warrantyCases: Warranty[]; warrantySummary?: { totalCases: number; pendingCases: number; claimedAmountEur: number; approvedAmountEur: number } }
+type Dealer = { dealerId: string; dealerName: string; isActive: boolean }
 
 const routes = { 'service-overview': 'service-overview', 'repair-status': 'repair-status', 'warranty-summary': 'warranty-summary' } as const
 const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(value)
@@ -14,6 +15,7 @@ const formatDate = (value?: string) => value ? new Date(`${value.slice(0, 10)}T1
 
 export function Tenant2Operations({ tenantId, page, onAsk }: { tenantId: string; page: Page; onAsk: (prompt: string) => void }) {
   const [dealerId, setDealerId] = useState('D001')
+  const [dealers, setDealers] = useState<Dealer[]>([])
   const [results, setResults] = useState<Partial<Record<keyof typeof routes, Result>>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -26,13 +28,27 @@ export function Tenant2Operations({ tenantId, page, onAsk }: { tenantId: string;
     } catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'Unable to load Tenant 2 service data.') }
     finally { setLoading(false) }
   }
+  useEffect(() => {
+    const controller = new AbortController()
+    void get<Dealer[]>(`/api/tenant2/dealers?tenantId=${tenantId}`, controller.signal)
+      .then(availableDealers => {
+        setDealers(availableDealers)
+        setDealerId(currentDealerId => availableDealers.some(dealer => dealer.dealerId === currentDealerId)
+          ? currentDealerId
+          : availableDealers[0]?.dealerId ?? currentDealerId)
+      })
+      .catch(requestError => {
+        if (!controller.signal.aborted) setError(requestError instanceof Error ? requestError.message : 'Unable to load Tenant 2 dealers.')
+      })
+    return () => controller.abort()
+  }, [tenantId])
   useEffect(() => { void load() }, [page])
   const service = results['service-overview']
   const repairs = results['repair-status']?.repairs ?? service?.repairs ?? []
   const warranty = results['warranty-summary']
   const overview = page === 'dashboard'
   return <>
-    <section className="tenant2-command surface"><div><span className="eyebrow">TENANT 2 · VEHICLE SERVICE</span><h2>{overview ? 'Workshop service command center' : page === 'service-overview' ? 'Service activity by dealer' : page === 'repair-status' ? 'Repair progress by dealer' : 'Warranty decisions by dealer'}</h2><p>Live records are read from the Tenant 2 service database.</p></div><form onSubmit={event => { event.preventDefault(); void load() }}><label>Dealer ID<input value={dealerId} maxLength={50} pattern="[A-Z0-9-]{1,50}" onChange={event => setDealerId(event.target.value.toUpperCase())} /></label><button className="primary" disabled={loading}>{loading ? 'Loading…' : 'Load records'}</button></form></section>
+    <section className="tenant2-command surface"><div><span className="eyebrow">TENANT 2 · VEHICLE SERVICE</span><h2>{overview ? 'Workshop service command center' : page === 'service-overview' ? 'Service activity by dealer' : page === 'repair-status' ? 'Repair progress by dealer' : 'Warranty decisions by dealer'}</h2><p>Live records are read from the Tenant 2 service database.</p></div><form onSubmit={event => { event.preventDefault(); void load() }}><label>Dealer Name<select value={dealerId} disabled={dealers.length === 0} onChange={event => setDealerId(event.target.value)}>{dealers.length === 0 ? <option>Loading dealers…</option> : dealers.map(dealer => <option key={dealer.dealerId} value={dealer.dealerId}>{dealer.dealerName}</option>)}</select></label><button className="primary" disabled={loading || dealers.length === 0}>{loading ? 'Loading…' : 'Load records'}</button></form></section>
     {error && <div className="error-banner" role="alert"><Icon name="alert" /><div>{error}</div><button className="secondary" onClick={() => void load()}>Retry</button></div>}
     {!error && loading && <div className="loading-surface" role="status"><span className="loading-ring" /><p>Loading Tenant 2 service records…</p></div>}
     {!error && !loading && <>
